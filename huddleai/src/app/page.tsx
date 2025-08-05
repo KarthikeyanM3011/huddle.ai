@@ -1,103 +1,245 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState } from 'react';
+import { authClient } from '@/lib/auth-client';
+import { Button } from '@/components/ui/button';
+
+export default function AuthForm() {
+  const {data: session} = authClient.useSession();
+  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [status, setStatus] = useState('');
+  const [isLogin, setIsLogin] = useState(true);
+
+  const styles = {
+    main: {
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#f9fafb',
+      padding: '16px'
+    },
+    form: {
+      width: '100%',
+      maxWidth: '400px',
+      backgroundColor: 'white',
+      padding: '32px',
+      borderRadius: '8px',
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: '24px'
+    },
+    title: {
+      fontSize: '24px',
+      fontWeight: '600',
+      textAlign: 'center' as const,
+      color: '#111827',
+      margin: 0
+    },
+    input: {
+      width: '100%',
+      padding: '12px 16px',
+      border: '1px solid #d1d5db',
+      borderRadius: '8px',
+      fontSize: '16px',
+      outline: 'none',
+      transition: 'border-color 0.2s, box-shadow 0.2s',
+      boxSizing: 'border-box' as const
+    },
+    inputFocus: {
+      borderColor: '#3b82f6',
+      boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)'
+    },
+    button: {
+      width: '100%',
+      padding: '12px 16px',
+      backgroundColor: '#3b82f6',
+      color: 'white',
+      border: 'none',
+      borderRadius: '8px',
+      fontSize: '16px',
+      fontWeight: '500',
+      cursor: 'pointer',
+      transition: 'background-color 0.2s'
+    },
+    buttonHover: {
+      backgroundColor: '#2563eb'
+    },
+    toggleButton: {
+      background: 'none',
+      border: 'none',
+      color: '#3b82f6',
+      fontSize: '14px',
+      cursor: 'pointer',
+      textDecoration: 'underline',
+      padding: '8px 0'
+    },
+    toggleText: {
+      textAlign: 'center' as const,
+      fontSize: '14px',
+      color: '#6b7280',
+      margin: 0
+    },
+    successStatus: {
+      fontSize: '14px',
+      textAlign: 'center' as const,
+      color: '#059669',
+      margin: 0
+    },
+    errorStatus: {
+      fontSize: '14px',
+      textAlign: 'center' as const,
+      color: '#dc2626',
+      margin: 0
+    },
+    welcomeContainer: {
+      textAlign: 'center' as const,
+      marginTop: '20px',
+      padding: '32px',
+      backgroundColor: 'white',
+      borderRadius: '8px',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      maxWidth: '400px',
+      margin: '20px auto'
+    },
+    welcomeTitle: {
+      fontSize: '24px',
+      fontWeight: '600',
+      color: '#111827',
+      marginBottom: '8px'
+    },
+    welcomeText: {
+      fontSize: '16px',
+      color: '#6b7280',
+      marginBottom: '20px'
+    }
+  };
+
+  if (session) {
+    return (
+      <div style={styles.welcomeContainer}>
+        <h2 style={styles.welcomeTitle}>Welcome, {session.user.name}!</h2>
+        <p style={styles.welcomeText}>You are already logged in.</p>
+        <Button onClick={() => authClient.signOut()}>
+          Sign out
+        </Button>
+      </div>
+    );
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus(isLogin ? 'Signing in...' : 'Creating account...');
+
+    try {
+      if (isLogin) {
+        await authClient.signIn.email({
+          email,
+          password
+        });
+        setStatus('Signed in successfully!');
+        window.alert('🎉 Signed in successfully!');
+      } else {
+        await authClient.signUp.email({
+          email,
+          password,
+          name
+        });
+        setStatus('Account created successfully!');
+        window.alert('🎉 Account created successfully!');
+      }
+      
+      setEmail('');
+      setPassword('');
+      setName('');
+    } catch (err: any) {
+      console.error(`Error ${isLogin ? 'signing in' : 'creating account'}:`, err);
+      const errorMessage = err.message || `Failed to ${isLogin ? 'sign in' : 'create account'}. Please try again.`;
+      setStatus(errorMessage);
+      window.alert(`❌ Error: ${errorMessage}`);
+    }
+  };
+
+  const toggleMode = () => {
+    setIsLogin(!isLogin);
+    setStatus('');
+    setEmail('');
+    setPassword('');
+    setName('');
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main style={styles.main}>
+      <form onSubmit={handleSubmit} style={styles.form}>
+        <h1 style={styles.title}>
+          {isLogin ? 'Sign In' : 'Create Account'}
+        </h1>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        {!isLogin && (
+          <input
+            type="text"
+            placeholder="Full Name"
+            required
+            style={styles.input}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onFocus={(e) => Object.assign(e.target.style, styles.inputFocus)}
+            onBlur={(e) => Object.assign(e.target.style, { borderColor: '#d1d5db', boxShadow: 'none' })}
+          />
+        )}
+        
+        <input
+          type="email"
+          placeholder="Email"
+          required
+          style={styles.input}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onFocus={(e) => Object.assign(e.target.style, styles.inputFocus)}
+          onBlur={(e) => Object.assign(e.target.style, { borderColor: '#d1d5db', boxShadow: 'none' })}
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          required
+          style={styles.input}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onFocus={(e) => Object.assign(e.target.style, styles.inputFocus)}
+          onBlur={(e) => Object.assign(e.target.style, { borderColor: '#d1d5db', boxShadow: 'none' })}
+        />
+
+        <button
+          type="submit"
+          style={styles.button}
+        >
+          {isLogin ? 'Sign In' : 'Create Account'}
+        </button>
+
+        {status && (
+          <p style={status.includes('successfully') ? styles.successStatus : styles.errorStatus}>
+            {status}
+          </p>
+        )}
+
+        <div style={{ textAlign: 'center' }}>
+          <p style={styles.toggleText}>
+            {isLogin ? "Don't have an account?" : "Already have an account?"}
+          </p>
+          <button
+            type="button"
+            onClick={toggleMode}
+            style={styles.toggleButton}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {isLogin ? 'Create one here' : 'Sign in here'}
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </form>
+    </main>
   );
 }

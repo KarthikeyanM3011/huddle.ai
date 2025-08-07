@@ -74,26 +74,11 @@ export function UserProfileDrawer({ open, onOpenChange }: UserProfileDrawerProps
                     <Mail className="w-3 h-3" />
                     <span>{session.user.email}</span>
                   </div>
-                  <div className="flex items-center justify-center space-x-1 text-xs text-gray-500">
-                    <Calendar className="w-3 h-3" />
-                    <span>Member since {joinDate}</span>
-                  </div>
                 </div>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Button
-                variant="ghost"
-                onClick={() => {}}
-                className="w-full justify-start h-12 px-4 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:scale-[1.02] transition-all duration-200 group"
-              >
-                <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg mr-3 group-hover:from-blue-500 group-hover:to-indigo-500 transition-colors">
-                  <User className="w-4 h-4 text-blue-600 group-hover:text-white" />
-                </div>
-                <span className="font-medium">Profile Settings</span>
-              </Button>
-
               <Button
                 variant="ghost"
                 onClick={handleBilling}
@@ -104,20 +89,7 @@ export function UserProfileDrawer({ open, onOpenChange }: UserProfileDrawerProps
                 </div>
                 <span className="font-medium">Billing & Plans</span>
               </Button>
-
-              <Button
-                variant="ghost"
-                onClick={() => {}}
-                className="w-full justify-start h-12 px-4 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 hover:scale-[1.02] transition-all duration-200 group"
-              >
-                <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-purple-100 to-violet-100 rounded-lg mr-3 group-hover:from-purple-500 group-hover:to-violet-500 transition-colors">
-                  <Settings className="w-4 h-4 text-purple-600 group-hover:text-white" />
-                </div>
-                <span className="font-medium">Preferences</span>
-              </Button>
             </div>
-
-            <Separator className="my-6 bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
             <Button
               variant="ghost"

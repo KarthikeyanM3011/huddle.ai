@@ -23,22 +23,22 @@ export function DashboardNavbar() {
     { 
       title: 'Meetings', 
       description: 'View and manage your meetings',
-      url: '/meetings',
+      url: '/dashboard/meetings',
     },
     { 
       title: 'Agents', 
       description: 'AI agents and assistants',
-      url: '/agents',
+      url: '/dashboard/agents',
     },
     { 
       title: 'Upgrade', 
       description: 'Upgrade your plan',
-      url: '/upgrade',
+      url: '/dashboard/upgrade',
     },
     { 
       title: 'Billing', 
       description: 'Manage billing and payments',
-      url: '/billing',
+      url: '/dashboard/billing',
     },
   ];
 

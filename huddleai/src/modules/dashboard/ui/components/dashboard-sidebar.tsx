@@ -33,13 +33,13 @@ export function DashboardSidebar() {
     {
       title: 'Meetings',
       icon: Video,
-      url: '/meetings',
+      url: '/dashboard/meetings',
       description: 'Schedule and manage meetings',
     },
     {
       title: 'Agents',
       icon: Bot,
-      url: '/agents',
+      url: '/dashboard/agents',
       description: 'AI-powered assistants',
     },
   ];

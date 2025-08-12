@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTRPC } from "@/trpc/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,13 +15,43 @@ import { Bot, Plus, Search, Calendar, ArrowRight, Sparkles } from "lucide-react"
 import { toast } from "sonner";
 import { type AgentsInsert } from "../../schema";
 
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export const AgentsView = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
   const router = useRouter();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [filters, setFilters] = useAgentFilters();
   
+  // Debounce search input by 500ms
+  const debouncedSearch = useDebounce(searchInput, 2000);
+
+  // Update URL search param when debounced search changes
+  useEffect(() => {
+    setFilters({ search: debouncedSearch, page: 1 });
+  }, [debouncedSearch, setFilters]);
+
+  // Initialize search input from URL on mount
+  useEffect(() => {
+    setSearchInput(filters.search);
+  }, []);
+
   const { data: agentsData, isLoading, refetch } = useQuery(
     trpc.agents.getMany.queryOptions(filters)
   );
@@ -42,8 +72,20 @@ export const AgentsView = () => {
     createAgentMutation.mutate(data);
   };
 
-  const handleSearchChange = (value: string) => {
-    setFilters({ search: value, page: 1 });
+  const handleSearchInputChange = (value: string) => {
+    setSearchInput(value);
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFilters({ search: searchInput, page: 1 });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      setFilters({ search: searchInput, page: 1 });
+    }
   };
 
   const handleAgentClick = (agentId: string) => {
@@ -164,14 +206,46 @@ export const AgentsView = () => {
         </Button>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-        <Input
-          placeholder="Search agents..."
-          value={filters.search}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="pl-10 max-w-md"
-        />
+      <div className="flex items-center space-x-4">
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <form onSubmit={handleSearchSubmit}>
+            <Input
+              placeholder="Search agents... (Press Enter to search)"
+              value={searchInput}
+              onChange={(e) => handleSearchInputChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="pl-10 pr-20"
+            />
+          </form>
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
+            {searchInput !== filters.search && searchInput && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setFilters({ search: searchInput, page: 1 })}
+                className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700"
+              >
+                Search
+              </Button>
+            )}
+            {(searchInput || filters.search) && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setSearchInput("");
+                  setFilters({ search: "", page: 1 });
+                }}
+                className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700"
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
 
       {agents.length === 0 ? (

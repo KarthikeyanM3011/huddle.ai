@@ -4,9 +4,40 @@ import { db } from "@/db";
 import { meetings, agents } from "@/db/schema";
 import { eq, and, ilike, count } from "drizzle-orm";
 import { z } from "zod";
+import { streamVideo } from "@/lib/stream-video";
+import { generateAvatarUri } from "@/lib/avatar";
 import { meetingsInsertSchema, meetingsUpdateSchema, meetingsQuerySchema } from "../schema";
 
 export const meetingsRouter = createTRPCRouter({
+    generateToken: protectedProcedure
+        .input(z.object({ meetingId: z.string() }))
+        .mutation(async ({ input, ctx }) => {
+            const user = ctx.auth.user;
+            const expirationTime = Math.floor(Date.now() / 1000) + 60 * 60;
+            const issuedAt = Math.floor(Date.now() / 1000) - 60;
+
+            const userImage = user.image || generateAvatarUri({ 
+                seed: user.name || user.email, 
+                variant: 'initials' 
+            });
+
+            await streamVideo.upsertUsers([{
+                id: user.id,
+                name: user.name || user.email,
+                role: 'admin',
+                image: userImage,
+            }]);
+
+            const token = streamVideo.generateUserToken({
+                user_id: user.id,
+                validity_in_seconds: 3600,
+                iat: issuedAt,
+                exp: expirationTime,
+            });
+
+            return { token };
+        }),
+
     getMany: protectedProcedure
         .input(meetingsQuerySchema)
         .query(async ({ input, ctx }) => {
@@ -147,6 +178,47 @@ export const meetingsRouter = createTRPCRouter({
                     userId: ctx.auth.user.id,
                 })
                 .returning();
+
+            try {
+                const call = streamVideo.video.call('default', createdMeeting.id);
+                
+                await call.create({
+                    data: {
+                        created_by_id: ctx.auth.user.id,
+                        custom: {
+                            meetingId: createdMeeting.id,
+                            meetingName: createdMeeting.name,
+                        },
+                        settings_override: {
+                            transcription: {
+                                language: 'en',
+                                mode: 'auto-on',
+                                closed_caption_mode: 'auto-on',
+                            },
+                            recording: {
+                                quality: '1080p',
+                                mode: 'auto-on',
+                            },
+                        },
+                    },
+                });
+
+                const agentData = agent[0];
+                const agentImage = generateAvatarUri({ 
+                    seed: agentData.name, 
+                    variant: 'botttsNeutral' 
+                });
+
+                await streamVideo.upsertUsers([{
+                    id: agentData.id,
+                    name: agentData.name,
+                    role: 'user',
+                    image: agentImage,
+                }]);
+
+            } catch (error) {
+                console.error('Failed to create stream call:', error);
+            }
 
             return createdMeeting;
         }),

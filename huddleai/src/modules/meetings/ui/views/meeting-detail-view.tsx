@@ -81,6 +81,10 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
     deleteMeetingMutation.mutate({ id: meetingId });
   };
 
+  const handleStartMeeting = () => {
+    router.push(`/call/${meetingId}`);
+  };
+
   const formatDuration = (duration: number | null) => {
     if (!duration) return null;
     const hours = Math.floor(duration / (1000 * 60 * 60));
@@ -244,7 +248,7 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
                   <>
                     <Button
                       className="w-full bg-green-600 hover:bg-green-700 text-white"
-                      disabled
+                      onClick={handleStartMeeting}
                     >
                       <Play className="w-4 h-4 mr-2" />
                       Start Meeting

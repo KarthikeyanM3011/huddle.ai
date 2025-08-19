@@ -399,7 +399,6 @@ export const agentsRouter = createTRPCRouter({
                     .values({
                         name: input.name,
                         instructions: enhancedInstructions, // Store the AI-enhanced instructions
-                        originalInstructions: input.instructions, // Keep original user input
                         userId: ctx.auth.user.id,
                     })
                     .returning();

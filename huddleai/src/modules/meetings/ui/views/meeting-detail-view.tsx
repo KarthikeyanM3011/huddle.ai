@@ -197,7 +197,7 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
                 <CardTitle>Meeting Resources</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {meeting.transcriptUrl && (
+                {/* {meeting.transcriptUrl && (
                   <Button
                     variant="outline"
                     className="w-full justify-start"
@@ -206,17 +206,24 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
                     <Video className="w-4 h-4 mr-2" />
                     View Transcript
                   </Button>
-                )}
+                )} */}
                 
                 {meeting.recordingUrl && (
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => window.open(meeting.recordingUrl!, '_blank')}
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    View Recording
-                  </Button>
+                  <>
+                    <div className="relative rounded-lg overflow-hidden bg-black">
+                      <video
+                        controls
+                        className="w-full h-auto max-h-64 object-contain"
+                        preload="metadata"
+                      >
+                        <source src={meeting.recordingUrl} type="video/mp4" />
+                        <source src={meeting.recordingUrl} type="video/webm" />
+                        <source src={meeting.recordingUrl} type="video/ogg" />
+                        Meeting Recording.
+                      </video>
+                    </div>
+                    
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -242,6 +249,7 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
                   </div>
                 )}
               </div>
+
 
               <div className="space-y-2">
                 {meeting.status === 'upcoming' && (
@@ -275,7 +283,7 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
                   </Button>
                 )}
 
-                {(meeting.status === 'cancelled' || meeting.status === 'completed') && (
+                {(meeting.status === 'cancelled' || (meeting.status === 'completed' && !meeting.recordingUrl)) && (
                   <div className="text-center text-sm text-gray-500 py-4">
                     Meeting has been {meeting.status}
                   </div>
@@ -387,7 +395,6 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
           defaultValues={{
             name: meeting.name,
             agentId: meeting.agentId,
-            instructions: meeting.instructions,
           }}
           onSubmit={handleUpdateMeeting}
           submitText="Update Meeting"

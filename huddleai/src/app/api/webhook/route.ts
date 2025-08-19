@@ -123,19 +123,65 @@ export async function POST(req: NextRequest) {
       })
       .where(eq(meetings.id, meetingId));
 
-  } else if (eventType === 'call.ended') {
+  } else if (eventType === 'call.session_ended') {
     const event = payload as CallEndedEvent;
     const meetingId = event.call.custom?.meetingId;
     
+    if (!meetingId) {
+      return NextResponse.json({ error: 'Missing meeting ID' }, { status: 400 });
+    }
+
     if (meetingId) {
       await db
         .update(meetings)
         .set({ 
-          status: 'completed',
+          status: 'processing',
           endedAt: new Date(),
           updatedAt: new Date()
         })
-        .where(eq(meetings.id, meetingId));
+        .where(and(eq(meetings.id, meetingId), eq(meetings.status, 'active')));
+    }
+
+  } else if (eventType === 'call.transcription_ready') {
+    const event = payload as CallTranscriptionReadyEvent;
+    const meetingId = event.call_cid.split(':')[1];
+    if (!meetingId) {
+      return NextResponse.json({ error: 'Missing meeting ID' }, { status: 400 });
+    }
+
+    const updateMeeting = await db
+      .update(meetings)
+      .set({ 
+        status: 'completed',
+        transcriptUrl: event.call_transcription.url,
+        updatedAt: new Date()
+      })
+      .where(eq(meetings.id, meetingId));
+
+    if (!updateMeeting) {
+      return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+    }
+    
+  } else if (eventType === 'call.recording_ready') {
+
+    const event = payload as CallRecordingReadyEvent;
+    const meetingId = event.call_cid.split(':')[1];
+
+    if (!meetingId) {
+      return NextResponse.json({ error: 'Missing meeting ID' }, { status: 400 });
+    }
+
+    const updateMeeting = await db
+      .update(meetings)
+      .set({ 
+        status: 'completed',
+        recordingUrl: event.call_recording.url,
+        updatedAt: new Date()
+      })
+      .where(eq(meetings.id, meetingId));
+    
+    if (!updateMeeting) {
+      return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
     }
 
   }

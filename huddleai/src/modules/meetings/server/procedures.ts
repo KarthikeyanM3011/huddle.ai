@@ -170,11 +170,13 @@ export const meetingsRouter = createTRPCRouter({
                     message: 'Agent not found',
                 });
             }
+            const agentInstructions = agent[0].instructions;
 
             const [createdMeeting] = await db
                 .insert(meetings)
                 .values({
                     ...input,
+                    instructions: agentInstructions, 
                     userId: ctx.auth.user.id,
                 })
                 .returning();
@@ -188,6 +190,7 @@ export const meetingsRouter = createTRPCRouter({
                         custom: {
                             meetingId: createdMeeting.id,
                             meetingName: createdMeeting.name,
+                            instructions: agentInstructions,
                         },
                         settings_override: {
                             transcription: {

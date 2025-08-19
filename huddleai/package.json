@@ -17,6 +17,7 @@
     "@dicebear/collection": "^9.2.3",
     "@dicebear/converter": "^9.2.3",
     "@dicebear/core": "^9.2.3",
+    "@google/genai": "^1.15.0",
     "@hookform/resolvers": "^5.2.1",
     "@neondatabase/serverless": "^1.0.1",
     "@radix-ui/react-accordion": "^1.2.11",
@@ -53,6 +54,7 @@
     "@trpc/server": "^11.1.2",
     "@trpc/tanstack-react-query": "^11.1.2",
     "better-auth": "^1.2.8",
+    "bufferutil": "^4.0.9",
     "class-variance-authority": "^0.7.1",
     "client-only": "^0.0.1",
     "clsx": "^2.1.1",
@@ -75,6 +77,7 @@
     "server-only": "^0.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
+    "utf-8-validate": "^6.0.5",
     "vaul": "^1.1.2",
     "zod": "^3.25.7"
   },

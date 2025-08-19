@@ -145,27 +145,6 @@ export function MeetingForm({
             </div>
           )}
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="instructions" className="text-gray-700 font-medium">
-            Meeting Instructions
-          </Label>
-          <div className="relative">
-            <Sparkles className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
-            <Textarea
-              id="instructions"
-              placeholder="Describe the meeting purpose, agenda, and any specific instructions for the agent..."
-              className="pl-10 min-h-32 resize-none"
-              {...register("instructions")}
-            />
-          </div>
-          {errors.instructions && (
-            <p className="text-sm text-red-600">{errors.instructions.message}</p>
-          )}
-          <p className="text-xs text-gray-500">
-            Provide clear instructions to help your agent facilitate the meeting effectively.
-          </p>
-        </div>
       </div>
 
       <Button

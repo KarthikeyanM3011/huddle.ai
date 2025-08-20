@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { MeetingForm } from "../components/meeting-form";
-import { Video, Edit, Trash2, ArrowLeft, Calendar, Clock, Sparkles, Bot, Play, Square, X } from "lucide-react";
+import { Video, Edit, Trash2, ArrowLeft, Calendar, Clock, Sparkles, Bot, Play, Square, X, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { type MeetingsInsert } from "../../schema";
 
@@ -173,43 +173,21 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
             </CardContent>
           </Card>
 
-          {meeting.summary && (
+          {(meeting.transcriptUrl || meeting.recordingUrl || meeting.summary) && (
             <Card className="bg-white/80 backdrop-blur-sm border-gray-200/50">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Sparkles className="w-5 h-5 text-green-600" />
-                  <span>Meeting Summary</span>
+                  <Video className="w-5 h-5 text-purple-600" />
+                  <span>Meeting Resources</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="prose prose-sm max-w-none text-gray-700">
-                  <p className="whitespace-pre-wrap leading-relaxed">
-                    {meeting.summary}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {(meeting.transcriptUrl || meeting.recordingUrl) && (
-            <Card className="bg-white/80 backdrop-blur-sm border-gray-200/50">
-              <CardHeader>
-                <CardTitle>Meeting Resources</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {/* {meeting.transcriptUrl && (
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => window.open(meeting.transcriptUrl!, '_blank')}
-                  >
-                    <Video className="w-4 h-4 mr-2" />
-                    View Transcript
-                  </Button>
-                )} */}
-                
+              <CardContent className="space-y-6">
                 {meeting.recordingUrl && (
-                  <>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-800 mb-3 flex items-center">
+                      <Video className="w-4 h-4 mr-2 text-purple-600" />
+                      Meeting Recording
+                    </h4>
                     <div className="relative rounded-lg overflow-hidden bg-black">
                       <video
                         controls
@@ -222,8 +200,40 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
                         Meeting Recording.
                       </video>
                     </div>
-                    
-                  </>
+                  </div>
+                )}
+
+                {meeting.summary && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-800 mb-3 flex items-center">
+                      <FileText className="w-4 h-4 mr-2 text-green-600" />
+                      Meeting Summary
+                    </h4>
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200/50 rounded-lg p-4">
+                      <div className="prose prose-sm max-w-none text-gray-700">
+                        <p className="whitespace-pre-wrap leading-relaxed text-sm">
+                          {meeting.summary}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {meeting.transcriptUrl && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-800 mb-3 flex items-center">
+                      <FileText className="w-4 h-4 mr-2 text-blue-600" />
+                      Transcript
+                    </h4>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start hover:bg-blue-50 hover:border-blue-200"
+                      onClick={() => window.open(meeting.transcriptUrl!, '_blank')}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      View Full Transcript
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -249,7 +259,6 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
                   </div>
                 )}
               </div>
-
 
               <div className="space-y-2">
                 {meeting.status === 'upcoming' && (

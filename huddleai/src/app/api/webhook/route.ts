@@ -10,6 +10,7 @@ import { and, eq, not } from 'drizzle-orm';
 import { db } from '@/db';
 import { meetings, agents } from '@/db/schema';
 import { streamVideo } from '@/lib/stream-video';
+import { generateMeetingSummary } from '@/modules/services/gemini';
 
 function verifySignatureWithSdk(body: string, signature: string): boolean {
   try {
@@ -149,6 +150,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing meeting ID' }, { status: 400 });
     }
 
+    let url = event.call_transcription.url
+    let jsonData = null;
+    
     const updateMeeting = await db
       .update(meetings)
       .set({ 
@@ -161,7 +165,42 @@ export async function POST(req: NextRequest) {
     if (!updateMeeting) {
       return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
     }
-    
+
+    try {
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
+      }
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Response is not JSON');
+      }
+      
+      jsonData = await response.json();
+    } catch (error) {
+      console.error('Error fetching typed JSON:', error);
+    }
+
+    if (!jsonData){
+      throw new Error(`Failed to fet JSON from url`);
+    }else{
+      const summary = await generateMeetingSummary(jsonData);
+      const updateMeeting = await db
+        .update(meetings)
+        .set({ 
+          summary: summary,
+          updatedAt: new Date()
+        })
+        .where(eq(meetings.id, meetingId));
+
+      if (!updateMeeting) {
+        return NextResponse.json({ error: 'Summary update error' }, { status: 404 });
+      }
+    }
+
+        
   } else if (eventType === 'call.recording_ready') {
 
     const event = payload as CallRecordingReadyEvent;

@@ -1,6 +1,6 @@
 import { record } from "better-auth";
 import { id } from "date-fns/locale";
-import { pgTable, text, timestamp, boolean, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, pgEnum,uuid,integer,varchar } from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 
 export const user = pgTable("user", {
@@ -79,6 +79,28 @@ export const meetings = pgTable("meetings", {
     transcriptUrl: text('transcript_url'),
     recordingUrl: text('recording_url'),
     summary: text('summary'),
+    scheduledStartTime: timestamp("scheduled_start_time", { withTimezone: true }),
+    estimatedDuration: text("estimated_duration"), // in minutes
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+
+export const calendarEvents = pgTable("calendar_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: varchar("title", { length: 100 }).notNull(),
+  description: text("description"),
+  startTime: timestamp("start_time", { withTimezone: true }).notNull(),
+  endTime: timestamp("end_time", { withTimezone: true }).notNull(),
+  
+  // Link to meeting if it's a meeting event
+  meetingId: text("meeting_id").references(() => meetings.id, { onDelete: 'cascade' }),
+  
+  type: varchar("type", { length: 20 }).notNull().default('event'), // 'meeting' or 'event'
+  status: varchar("status", { length: 20 }).notNull().default('scheduled'), // 'scheduled', 'completed', 'cancelled'
+  reminderSent: boolean("reminder_sent").notNull().default(false),
+  
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

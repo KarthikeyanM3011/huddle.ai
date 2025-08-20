@@ -146,61 +146,91 @@ export async function POST(req: NextRequest) {
   } else if (eventType === 'call.transcription_ready') {
     const event = payload as CallTranscriptionReadyEvent;
     const meetingId = event.call_cid.split(':')[1];
+    
     if (!meetingId) {
       return NextResponse.json({ error: 'Missing meeting ID' }, { status: 400 });
     }
 
-    let url = event.call_transcription.url
+    const url = event.call_transcription.url;
     let jsonData = null;
     
-    const updateMeeting = await db
-      .update(meetings)
-      .set({ 
-        status: 'completed',
-        transcriptUrl: event.call_transcription.url,
-        updatedAt: new Date()
-      })
-      .where(eq(meetings.id, meetingId));
+    try {
+      const updateMeeting = await db
+        .update(meetings)
+        .set({ 
+          status: 'completed',
+          transcriptUrl: event.call_transcription.url,
+          updatedAt: new Date()
+        })
+        .where(eq(meetings.id, meetingId));
 
-    if (!updateMeeting) {
-      return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+      if (!updateMeeting) {
+        return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+      }
+    } catch (error) {
+      console.error('Error updating meeting:', error);
+      return NextResponse.json({ error: 'Failed to update meeting' }, { status: 500 });
     }
 
+    let rawText = null;
     try {
+      console.log('Fetching transcription from URL:', url);
       const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
       }
       
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Response is not JSON');
+      rawText = await response.text();
+      console.log('Raw response (first 500 chars):', rawText.substring(0, 500));
+      
+      if (!rawText.trim().startsWith('{') && !rawText.trim().startsWith('[')) {
+        throw new Error('Response does not appear to be JSON');
       }
       
-      jsonData = await response.json();
     } catch (error) {
-      console.error('Error fetching typed JSON:', error);
+      console.error('Error fetching transcription:', error);
+      console.log('Continuing without generating summary due to transcription fetch error');
+      return NextResponse.json({ 
+        message: 'Meeting updated but summary generation failed',
+        error: typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string }).message : String(error)
+      }, { status: 200 });
     }
 
-    if (!jsonData){
-      throw new Error(`Failed to fet JSON from url`);
-    }else{
-      const summary = await generateMeetingSummary(jsonData);
-      const updateMeeting = await db
-        .update(meetings)
-        .set({ 
-          summary: summary,
-          updatedAt: new Date()
-        })
-        .where(eq(meetings.id, meetingId));
-
-      if (!updateMeeting) {
-        return NextResponse.json({ error: 'Summary update error' }, { status: 404 });
-      }
-    }
-
+    if (rawText) {
+      try {
+        console.log('Generating meeting summary...');
+        const summary = await generateMeetingSummary(rawText);
         
+        const summaryUpdate = await db
+          .update(meetings)
+          .set({ 
+            summary: summary,
+            updatedAt: new Date()
+          })
+          .where(eq(meetings.id, meetingId));
+
+        if (!summaryUpdate) {
+          console.error('Failed to update meeting with summary');
+          return NextResponse.json({ error: 'Summary update error' }, { status: 500 });
+        }
+        
+        console.log('Successfully updated meeting with summary');
+        return NextResponse.json({ message: 'Meeting updated with summary' }, { status: 200 });
+        
+      } catch (error) {
+        console.error('Error generating or saving summary:', error);
+        return NextResponse.json({ 
+          message: 'Meeting updated but summary generation failed',
+          error: typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string }).message : String(error)
+        }, { status: 200 });
+      }
+    } else {
+      console.log('No valid JSON data available for summary generation');
+      return NextResponse.json({ 
+        message: 'Meeting updated but no transcription data available' 
+      }, { status: 200 });
+    }
   } else if (eventType === 'call.recording_ready') {
 
     const event = payload as CallRecordingReadyEvent;

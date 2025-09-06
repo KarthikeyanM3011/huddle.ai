@@ -2,7 +2,7 @@ import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { db } from "@/db";
 import { meetings, agents } from "@/db/schema";
-import { eq, and, ilike, count } from "drizzle-orm";
+import { eq, and, ilike, count, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 import { streamVideo } from "@/lib/stream-video";
 import { generateAvatarUri } from "@/lib/avatar";
@@ -70,6 +70,7 @@ export const meetingsRouter = createTRPCRouter({
                         transcriptUrl: meetings.transcriptUrl,
                         recordingUrl: meetings.recordingUrl,
                         summary: meetings.summary,
+                        scheduledStartTime: meetings.scheduledStartTime,
                         createdAt: meetings.createdAt,
                         updatedAt: meetings.updatedAt,
                         agentId: meetings.agentId,
@@ -112,6 +113,55 @@ export const meetingsRouter = createTRPCRouter({
             };
         }),
 
+    getCalendarEvents: protectedProcedure
+        .input(z.object({
+            startDate: z.date(),
+            endDate: z.date(),
+            showCompleted: z.boolean().default(false),
+        }))
+        .query(async ({ input, ctx }) => {
+            const { startDate, endDate, showCompleted } = input;
+            
+            const whereConditions = [
+                eq(meetings.userId, ctx.auth.user.id),
+                gte(meetings.scheduledStartTime, startDate),
+                lte(meetings.scheduledStartTime, endDate),
+            ];
+
+            if (!showCompleted) {
+                whereConditions.push(eq(meetings.status, 'upcoming' as any));
+            } else {
+                whereConditions.push(eq(meetings.status, 'completed' as any));
+            }
+
+            const meetingsList = await db
+                .select({
+                    id: meetings.id,
+                    name: meetings.name,
+                    status: meetings.status,
+                    instructions: meetings.instructions,
+                    scheduledStartTime: meetings.scheduledStartTime,
+                    agentId: meetings.agentId,
+                    agentName: agents.name,
+                })
+                .from(meetings)
+                .leftJoin(agents, eq(meetings.agentId, agents.id))
+                .where(and(...whereConditions))
+                .orderBy(meetings.scheduledStartTime);
+
+            return meetingsList.map(meeting => ({
+                id: meeting.id,
+                title: meeting.name,
+                description: meeting.instructions,
+                startTime: meeting.scheduledStartTime,
+                endTime: meeting.scheduledStartTime ? new Date(new Date(meeting.scheduledStartTime).getTime() + 60 * 60 * 1000) : null,
+                type: 'meeting' as const,
+                status: meeting.status,
+                meetingId: meeting.id,
+                agentName: meeting.agentName,
+            }));
+        }),
+
     getOne: protectedProcedure
         .input(z.object({ id: z.string() }))
         .query(async ({ input, ctx }) => {
@@ -126,6 +176,7 @@ export const meetingsRouter = createTRPCRouter({
                     transcriptUrl: meetings.transcriptUrl,
                     recordingUrl: meetings.recordingUrl,
                     summary: meetings.summary,
+                    scheduledStartTime: meetings.scheduledStartTime,
                     createdAt: meetings.createdAt,
                     updatedAt: meetings.updatedAt,
                     agentId: meetings.agentId,
@@ -172,11 +223,17 @@ export const meetingsRouter = createTRPCRouter({
             }
             const agentInstructions = agent[0].instructions;
 
+            const scheduledStartTime = input.startNow 
+                ? new Date() 
+                : input.scheduledStartTime || new Date();
+
             const [createdMeeting] = await db
                 .insert(meetings)
                 .values({
-                    ...input,
+                    name: input.name,
+                    agentId: input.agentId,
                     instructions: agentInstructions, 
+                    scheduledStartTime,
                     userId: ctx.auth.user.id,
                 })
                 .returning();
@@ -223,7 +280,7 @@ export const meetingsRouter = createTRPCRouter({
                 console.error('Failed to create stream call:', error);
             }
 
-            return createdMeeting;
+            return { ...createdMeeting, startNow: input.startNow };
         }),
 
     update: protectedProcedure
@@ -260,12 +317,17 @@ export const meetingsRouter = createTRPCRouter({
                 }
             }
 
+            const updateData: any = {
+                updatedAt: new Date(),
+            };
+
+            if (input.data.name) updateData.name = input.data.name;
+            if (input.data.agentId) updateData.agentId = input.data.agentId;
+            if (input.data.scheduledStartTime) updateData.scheduledStartTime = input.data.scheduledStartTime;
+
             const [updatedMeeting] = await db
                 .update(meetings)
-                .set({
-                    ...input.data,
-                    updatedAt: new Date(),
-                })
+                .set(updateData)
                 .where(eq(meetings.id, input.id))
                 .returning();
 

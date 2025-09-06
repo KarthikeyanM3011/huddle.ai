@@ -87,8 +87,15 @@ export const MeetingsView = () => {
 
   const createMeetingMutation = useMutation({
     ...trpc.meetings.create.mutationOptions(),
-    onSuccess: () => {
-      toast.success("Meeting scheduled successfully!");
+    onSuccess: (data) => {
+      if (data.startNow) {
+        toast.success("Meeting started! Redirecting...");
+        setTimeout(() => {
+          router.push(`/call/${data.id}`);
+        }, 1000);
+      } else {
+        toast.success("Meeting scheduled successfully!");
+      }
       setIsCreateDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
     },
@@ -99,6 +106,10 @@ export const MeetingsView = () => {
 
   const handleCreateMeeting = async (data: MeetingsInsert) => {
     createMeetingMutation.mutate(data);
+  };
+
+  const handleStartNow = async (data: MeetingsInsert) => {
+    createMeetingMutation.mutate({ ...data, startNow: true });
   };
 
   const handleSearchInputChange = (value: string) => {
@@ -147,6 +158,38 @@ export const MeetingsView = () => {
     const hours = Math.floor(duration / (1000 * 60 * 60));
     const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
     return `${hours}h ${minutes}m`;
+  };
+
+  const formatScheduledTime = (scheduledTime: string | null) => {
+    if (!scheduledTime) return null;
+    const date = new Date(scheduledTime);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    
+    if (isToday) {
+      return `Today at ${date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true 
+      })}`;
+    }
+    
+    const isTomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString() === date.toDateString();
+    if (isTomorrow) {
+      return `Tomorrow at ${date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true 
+      })}`;
+    }
+    
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
   if (isLoading) {
@@ -238,6 +281,7 @@ export const MeetingsView = () => {
         >
           <MeetingForm
             onSubmit={handleCreateMeeting}
+            onStartNow={handleStartNow}
             isLoading={createMeetingMutation.isPending}
           />
         </ResponsiveDialog>
@@ -389,6 +433,7 @@ export const MeetingsView = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {meetings.map((meeting) => {
             const statusColor = statusColors[meeting.status as keyof typeof statusColors];
+            const scheduledTime = formatScheduledTime(meeting.scheduledStartTime);
             return (
               <Card 
                 key={meeting.id} 
@@ -428,6 +473,12 @@ export const MeetingsView = () => {
                       <Bot className="w-4 h-4" />
                       <span>Agent: {meeting.agentName}</span>
                     </div>
+                    {scheduledTime && (
+                      <div className="flex items-center space-x-2 text-sm text-blue-600">
+                        <Calendar className="w-4 h-4" />
+                        <span>Scheduled: {scheduledTime}</span>
+                      </div>
+                    )}
                     <p className="text-gray-600 text-sm line-clamp-2 leading-relaxed">
                       {meeting.instructions}
                     </p>
@@ -476,6 +527,7 @@ export const MeetingsView = () => {
       >
         <MeetingForm
           onSubmit={handleCreateMeeting}
+          onStartNow={handleStartNow}
           isLoading={createMeetingMutation.isPending}
         />
       </ResponsiveDialog>

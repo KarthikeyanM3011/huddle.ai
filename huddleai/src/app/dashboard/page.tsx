@@ -5,7 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
   Bot, 
-  Calendar,
+  CalendarPlus,   
+  CalendarDays,   
   ArrowRight,
   Plus
 } from 'lucide-react';
@@ -23,7 +24,7 @@ export default function Dashboard() {
     {
       title: 'Schedule Meeting',
       description: 'Create a new meeting with AI assistance',
-      icon: Calendar,
+      icon: CalendarPlus,
       action: () => router.push('/dashboard/meetings'),
       color: 'from-blue-500 to-indigo-600'
     },
@@ -34,10 +35,18 @@ export default function Dashboard() {
       action: () => router.push('/dashboard/agents'),
       color: 'from-purple-500 to-violet-600'
     },
+    {
+      title: 'Calendar',
+      description: 'See all your meetings in one place',
+      icon: CalendarDays,
+      action: () => router.push('/dashboard/calendar'),
+      color: 'from-green-500 to-emerald-600'
+    }
   ];
 
   return (
     <div className="p-6 space-y-6">
+      {/* Welcome Section */}
       <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-6 text-white">
         <div className="relative">
           <div className="flex items-center justify-between">
@@ -50,6 +59,8 @@ export default function Dashboard() {
               </p>
             </div>
           </div>
+
+          {/* Top Quick Buttons */}
           <div className="mt-4 flex gap-3">
             <Button 
               onClick={() => router.push('/dashboard/meetings')}
@@ -69,10 +80,20 @@ export default function Dashboard() {
               <Bot className="w-4 h-4 mr-2" />
               Create Agent
             </Button>
+            <Button 
+              onClick={() => router.push('/dashboard/calendar')}
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30 hover:border-white/50 backdrop-blur-sm transition-all duration-200"
+              variant="outline"
+              size="sm"
+            >
+              <CalendarDays className="w-4 h-4 mr-2" />
+              Calendar
+            </Button>
           </div>
         </div>
       </div>
 
+      {/* Quick Actions Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {quickActions.map((action) => {
           const IconComponent = action.icon;

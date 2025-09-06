@@ -5,11 +5,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Video, Sparkles, Bot, Plus } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Video, Bot, Plus, Calendar, Clock, Play } from "lucide-react";
 import { meetingsInsertSchema, type MeetingsInsert } from "../../schema";
 import { useTRPC } from "@/trpc/client";
 import { useQuery } from "@tanstack/react-query";
@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 interface MeetingFormProps {
   defaultValues?: Partial<MeetingsInsert>;
   onSubmit: (data: MeetingsInsert) => Promise<void>;
+  onStartNow?: (data: MeetingsInsert) => Promise<void>;
   submitText?: string;
   isLoading?: boolean;
 }
@@ -25,10 +26,12 @@ interface MeetingFormProps {
 export function MeetingForm({
   defaultValues,
   onSubmit,
+  onStartNow,
   submitText = "Schedule Meeting",
   isLoading = false,
 }: MeetingFormProps) {
   const [error, setError] = useState<string>("");
+  const [startNow, setStartNow] = useState(false);
   const trpc = useTRPC();
   const router = useRouter();
 
@@ -53,9 +56,21 @@ export function MeetingForm({
   const handleFormSubmit = async (data: MeetingsInsert) => {
     try {
       setError("");
-      await onSubmit(data);
+      const submitData = {
+        ...data,
+        startNow,
+        scheduledStartTime: startNow ? new Date() : data.scheduledStartTime,
+      };
+
+      if (startNow && onStartNow) {
+        await onStartNow(submitData);
+      } else {
+        await onSubmit(submitData);
+      }
+
       if (!defaultValues) {
         reset();
+        setStartNow(false);
       }
     } catch (err: any) {
       setError(err.message || "Something went wrong");
@@ -64,6 +79,20 @@ export function MeetingForm({
 
   const handleCreateAgent = () => {
     router.push("/dashboard/agents");
+  };
+
+  const formatDateTimeLocal = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const getMinDateTime = () => {
+    const now = new Date();
+    return formatDateTimeLocal(now);
   };
 
   return (
@@ -145,22 +174,83 @@ export function MeetingForm({
             </div>
           )}
         </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+            <Switch
+              id="start-now"
+              checked={startNow}
+              onCheckedChange={setStartNow}
+            />
+            <div className="flex-1">
+              <Label htmlFor="start-now" className="text-green-800 font-medium cursor-pointer">
+                Start meeting now
+              </Label>
+              <p className="text-sm text-green-600">
+                Skip scheduling and start the meeting immediately
+              </p>
+            </div>
+            <Play className="w-5 h-5 text-green-600" />
+          </div>
+
+          {!startNow && (
+            <div className="space-y-2">
+              <Label htmlFor="scheduledStartTime" className="text-gray-700 font-medium">
+                Schedule Date & Time
+              </Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  id="scheduledStartTime"
+                  type="datetime-local"
+                  min={getMinDateTime()}
+                  className="pl-10"
+                  {...register("scheduledStartTime", {
+                    setValueAs: (value) => value ? new Date(value) : undefined
+                  })}
+                />
+              </div>
+              {errors.scheduledStartTime && (
+                <p className="text-sm text-red-600">{errors.scheduledStartTime.message}</p>
+              )}
+              {!startNow && !watch("scheduledStartTime") && (
+                <p className="text-sm text-amber-600">
+                  <Clock className="w-4 h-4 inline mr-1" />
+                  Select a date and time to schedule the meeting, or enable "Start now" option
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <Button
         type="submit"
         disabled={isLoading || !agentsData?.agents.length}
-        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+        className={`w-full transition-all duration-200 ${
+          startNow
+            ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+            : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+        }`}
       >
         {isLoading ? (
           <div className="flex items-center">
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-            {defaultValues ? "Updating..." : "Scheduling..."}
+            {startNow ? "Starting..." : defaultValues ? "Updating..." : "Scheduling..."}
           </div>
         ) : (
           <div className="flex items-center">
-            <Video className="w-4 h-4 mr-2" />
-            {submitText}
+            {startNow ? (
+              <>
+                <Play className="w-4 h-4 mr-2" />
+                Start Meeting Now
+              </>
+            ) : (
+              <>
+                <Video className="w-4 h-4 mr-2" />
+                {submitText}
+              </>
+            )}
           </div>
         )}
       </Button>

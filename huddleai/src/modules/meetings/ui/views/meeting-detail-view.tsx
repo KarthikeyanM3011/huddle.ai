@@ -260,6 +260,20 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
     return `${hours}h ${minutes}m`;
   };
 
+  const formatScheduledTime = (scheduledTime: string | null) => {
+    if (!scheduledTime) return null;
+    const date = new Date(scheduledTime);
+    return date.toLocaleString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
   const truncateInstructions = (text: string, lines: number = 5) => {
     const words = text.split(' ');
     const wordsPerLine = 12;
@@ -275,7 +289,6 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
     };
   };
 
-  // Check if meeting data exists
   if (!meeting) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 flex items-center justify-center">
@@ -293,6 +306,7 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
 
   const statusColor = statusColors[meeting.status as keyof typeof statusColors] || statusColors.upcoming;
   const StatusIcon = statusColor.icon;
+  const scheduledTime = formatScheduledTime(meeting.scheduledStartTime);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40">
@@ -556,6 +570,15 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
                     {meeting.id}
                   </p>
                 </div>
+
+                {scheduledTime && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-800">Scheduled Time</label>
+                    <p className="text-sm text-gray-700 mt-1">
+                      {scheduledTime}
+                    </p>
+                  </div>
+                )}
                 
                 <div>
                   <label className="text-sm font-medium text-gray-800">Created</label>
@@ -623,12 +646,13 @@ export const MeetingDetailView = ({ meetingId }: MeetingDetailViewProps) => {
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         title="Edit Meeting"
-        description="Update your meeting information and instructions."
+        description="Update your meeting information and schedule."
       >
         <MeetingForm
           defaultValues={{
             name: meeting.name,
             agentId: meeting.agentId,
+            scheduledStartTime: meeting.scheduledStartTime ? new Date(meeting.scheduledStartTime) : undefined,
           }}
           onSubmit={handleUpdateMeeting}
           submitText="Update Meeting"

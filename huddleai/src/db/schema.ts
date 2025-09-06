@@ -13,7 +13,6 @@ export const user = pgTable("user", {
     updatedAt: timestamp('updated_at').$defaultFn(() => /* @__PURE__ */ new Date()).notNull()
 });
 
-
 export const session = pgTable("session", {
     id: text('id').primaryKey(),
     expiresAt: timestamp('expires_at').notNull(),
@@ -80,27 +79,6 @@ export const meetings = pgTable("meetings", {
     recordingUrl: text('recording_url'),
     summary: text('summary'),
     scheduledStartTime: timestamp("scheduled_start_time", { withTimezone: true }),
-    estimatedDuration: text("estimated_duration"), // in minutes
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
-
-
-export const calendarEvents = pgTable("calendar_events", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  title: varchar("title", { length: 100 }).notNull(),
-  description: text("description"),
-  startTime: timestamp("start_time", { withTimezone: true }).notNull(),
-  endTime: timestamp("end_time", { withTimezone: true }).notNull(),
-  
-  // Link to meeting if it's a meeting event
-  meetingId: text("meeting_id").references(() => meetings.id, { onDelete: 'cascade' }),
-  
-  type: varchar("type", { length: 20 }).notNull().default('event'), // 'meeting' or 'event'
-  status: varchar("status", { length: 20 }).notNull().default('scheduled'), // 'scheduled', 'completed', 'cancelled'
-  reminderSent: boolean("reminder_sent").notNull().default(false),
-  
-  userId: text("user_id").notNull().references(() => user.id, { onDelete: 'cascade' }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

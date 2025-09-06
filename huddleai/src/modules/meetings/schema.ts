@@ -3,7 +3,8 @@ import { z } from 'zod';
 export const meetingsInsertSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
   agentId: z.string().min(1, 'Agent is required'),
-  // instructions: z.string().min(1, 'Instructions are required').max(2000, 'Instructions must be less than 2000 characters'),
+  scheduledStartTime: z.coerce.date().optional(),
+  startNow: z.boolean().optional(),
 });
 
 export const meetingsUpdateSchema = meetingsInsertSchema.partial();

@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Video, Bot, Star, Sparkles } from 'lucide-react';
+import { Video, Bot, Star, Sparkles, Calendar } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -41,6 +41,12 @@ export function DashboardSidebar() {
       icon: Bot,
       url: '/dashboard/agents',
       description: 'AI-powered assistants',
+    },
+    {
+      title: 'Calendar',
+      icon: Calendar,
+      url: '/dashboard/calendar',
+      description: 'Calendar',
     },
   ];
 

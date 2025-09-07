@@ -11,6 +11,7 @@ import { db } from '@/db';
 import { meetings, agents } from '@/db/schema';
 import { streamVideo } from '@/lib/stream-video';
 import { generateMeetingSummary } from '@/modules/services/gemini';
+import { inngest } from "@/inngest/client";
 
 function verifySignatureWithSdk(body: string, signature: string): boolean {
   try {
@@ -152,17 +153,16 @@ export async function POST(req: NextRequest) {
     }
 
     const url = event.call_transcription.url;
-    let jsonData = null;
     
     try {
       const updateMeeting = await db
         .update(meetings)
         .set({ 
-          status: 'completed',
           transcriptUrl: event.call_transcription.url,
           updatedAt: new Date()
         })
-        .where(eq(meetings.id, meetingId));
+        .where(eq(meetings.id, meetingId))
+        .returning();
 
       if (!updateMeeting) {
         return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
@@ -172,65 +172,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to update meeting' }, { status: 500 });
     }
 
-    let rawText = null;
-    try {
-      console.log('Fetching transcription from URL:', url);
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
+    await inngest.send({
+      name: 'meetings/processing',
+      data: {
+        meetingId,
+        transcriptUrl: url
       }
-      
-      rawText = await response.text();
-      console.log('Raw response (first 500 chars):', rawText.substring(0, 500));
-      
-      if (!rawText.trim().startsWith('{') && !rawText.trim().startsWith('[')) {
-        throw new Error('Response does not appear to be JSON');
-      }
-      
-    } catch (error) {
-      console.error('Error fetching transcription:', error);
-      console.log('Continuing without generating summary due to transcription fetch error');
-      return NextResponse.json({ 
-        message: 'Meeting updated but summary generation failed',
-        error: typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string }).message : String(error)
-      }, { status: 200 });
-    }
-
-    if (rawText) {
-      try {
-        console.log('Generating meeting summary...');
-        const summary = await generateMeetingSummary(rawText);
-        
-        const summaryUpdate = await db
-          .update(meetings)
-          .set({ 
-            summary: summary,
-            updatedAt: new Date()
-          })
-          .where(eq(meetings.id, meetingId));
-
-        if (!summaryUpdate) {
-          console.error('Failed to update meeting with summary');
-          return NextResponse.json({ error: 'Summary update error' }, { status: 500 });
-        }
-        
-        console.log('Successfully updated meeting with summary');
-        return NextResponse.json({ message: 'Meeting updated with summary' }, { status: 200 });
-        
-      } catch (error) {
-        console.error('Error generating or saving summary:', error);
-        return NextResponse.json({ 
-          message: 'Meeting updated but summary generation failed',
-          error: typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string }).message : String(error)
-        }, { status: 200 });
-      }
-    } else {
-      console.log('No valid JSON data available for summary generation');
-      return NextResponse.json({ 
-        message: 'Meeting updated but no transcription data available' 
-      }, { status: 200 });
-    }
+    });
   } else if (eventType === 'call.recording_ready') {
 
     const event = payload as CallRecordingReadyEvent;
